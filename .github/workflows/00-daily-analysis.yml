@@ -59,6 +59,23 @@ jobs:
       - name: 创建必要目录
         run: |
           mkdir -p data logs reports
+
+      # Persist data/ (SQLite history) between runs: enables REPORT_HISTORY_COMPARE_N
+      # and lets the resume logic skip re-fetching K-line data already stored.
+      - name: 恢复历史数据缓存 (data/)
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: dsa-data-${{ github.run_id }}
+          restore-keys: |
+            dsa-data-
+
+      # Only needed when MARKDOWN_TO_IMAGE_CHANNELS is set (report pushed as an image).
+      - name: 安装 Playwright（报告转图片）
+        if: ${{ vars.MARKDOWN_TO_IMAGE_CHANNELS != '' }}
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
       
       - name: 执行股票分析
         env:
@@ -307,6 +324,8 @@ jobs:
           SERPAPI_API_KEYS: ${{ secrets.SERPAPI_API_KEYS }}
           MINIMAX_API_KEYS: ${{ secrets.MINIMAX_API_KEYS }}
           BRAVE_API_KEYS: ${{ secrets.BRAVE_API_KEYS }}
+          SOCIAL_SENTIMENT_API_KEY: ${{ secrets.SOCIAL_SENTIMENT_API_KEY }}
+          SOCIAL_SENTIMENT_API_URL: ${{ vars.SOCIAL_SENTIMENT_API_URL || secrets.SOCIAL_SENTIMENT_API_URL }}
           SEARXNG_BASE_URLS: ${{ vars.SEARXNG_BASE_URLS || secrets.SEARXNG_BASE_URLS }}
           SEARXNG_PUBLIC_INSTANCES_ENABLED: ${{ vars.SEARXNG_PUBLIC_INSTANCES_ENABLED || secrets.SEARXNG_PUBLIC_INSTANCES_ENABLED }}
           SEARXNG_TIMEOUT_SECONDS: ${{ vars.SEARXNG_TIMEOUT_SECONDS || secrets.SEARXNG_TIMEOUT_SECONDS }}
@@ -411,6 +430,10 @@ jobs:
           REPORT_LANGUAGE: ${{ vars.REPORT_LANGUAGE || secrets.REPORT_LANGUAGE || '' }}
           REPORT_SHOW_LLM_MODEL: ${{ vars.REPORT_SHOW_LLM_MODEL || secrets.REPORT_SHOW_LLM_MODEL || 'true' }}
           SINGLE_STOCK_NOTIFY: ${{ vars.SINGLE_STOCK_NOTIFY || secrets.SINGLE_STOCK_NOTIFY || 'false' }}
+          REPORT_HISTORY_COMPARE_N: ${{ vars.REPORT_HISTORY_COMPARE_N || secrets.REPORT_HISTORY_COMPARE_N || '0' }}
+          MARKDOWN_TO_IMAGE_CHANNELS: ${{ vars.MARKDOWN_TO_IMAGE_CHANNELS || secrets.MARKDOWN_TO_IMAGE_CHANNELS }}
+          MARKDOWN_TO_IMAGE_MAX_CHARS: ${{ vars.MARKDOWN_TO_IMAGE_MAX_CHARS || secrets.MARKDOWN_TO_IMAGE_MAX_CHARS }}
+          MD2IMG_ENGINE: ${{ vars.MD2IMG_ENGINE || secrets.MD2IMG_ENGINE || 'playwright' }}
           MARKET_REVIEW_ENABLED: ${{ vars.MARKET_REVIEW_ENABLED || secrets.MARKET_REVIEW_ENABLED || 'true' }}
           ANALYSIS_DELAY: ${{ vars.ANALYSIS_DELAY || secrets.ANALYSIS_DELAY || '0' }}
           TRADING_DAY_CHECK_ENABLED: ${{ vars.TRADING_DAY_CHECK_ENABLED || secrets.TRADING_DAY_CHECK_ENABLED || 'true' }}
